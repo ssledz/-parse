@@ -33,7 +33,7 @@ object Parsers {
     }
 
   implicit def regex(r: Regex): Parser[String] = scope(s"Expected: $r") { loc =>
-    r.findFirstIn(loc.in) match {
+    r.findPrefixOf(loc.in) match {
       case Some(value) => Success(value, value.length)
       case None => Failure.Empty
     }
