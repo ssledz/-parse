@@ -28,11 +28,11 @@ object Parsers {
     } yield (a, b)
 
   implicit def string(s: String): Parser[String] =
-    scope(s"Expected: $s") { loc =>
+    scope(s"Expected: '$s'") { loc =>
       if (loc.in.startsWith(s)) Success(s, s.length) else Failure.Empty
     }
 
-  implicit def regex(r: Regex): Parser[String] = scope(s"Expected: $r") { loc =>
+  implicit def regex(r: Regex): Parser[String] = scope(s"Expected: '$r'") { loc =>
     r.findPrefixOf(loc.in) match {
       case Some(value) => Success(value, value.length)
       case None => Failure.Empty
