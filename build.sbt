@@ -1,4 +1,4 @@
-name := "μparse"
+name := "uparse"
 
 version := "0.1"
 
