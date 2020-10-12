@@ -12,6 +12,8 @@ object Parsers {
 
   def succeed[A](a: A): Parser[A] = _ => Success(a, 0)
 
+  def fail[A](msg: String): Parser[A] = loc => Failure(loc.toError(msg))
+
   def map[A, B](p: Parser[A])(f: A => B): Parser[B] = flatMap(p)(f.andThen(succeed))
 
   def map2[A, B, C](p: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] = map(product(p, p2))(f.tupled)
@@ -35,7 +37,7 @@ object Parsers {
   implicit def regex(r: Regex): Parser[String] = scope(s"Expected: '$r'") { loc =>
     r.findPrefixOf(loc.in) match {
       case Some(value) => Success(value, value.length)
-      case None        => Failure.Empty
+      case None => Failure.Empty
     }
   }
 
@@ -47,8 +49,8 @@ object Parsers {
     loc =>
       p1(loc) match {
         case Failure(_, false) => p2(loc)
-        case other             => other
-    }
+        case other => other
+      }
 
   def many1[A](p: Parser[A]): Parser[List[A]] =
     for {
@@ -60,15 +62,15 @@ object Parsers {
     loc =>
       p(loc) match {
         case Success(_, charsConsumed) => Success(loc.in.take(charsConsumed), charsConsumed)
-        case err @ Failure(_, _)       => err
-    }
+        case err@Failure(_, _) => err
+      }
 
   def attempt[A](p: Parser[A]): Parser[A] =
     loc =>
       p(loc) match {
         case Failure(e, true) => Failure(e, false)
-        case other            => other
-    }
+        case other => other
+      }
 
   def flatMap[A, B](p: Parser[A])(f: A => Parser[B]): Parser[B] =
     loc =>
@@ -77,8 +79,8 @@ object Parsers {
           f(a)(loc.advanceBy(charsConsumed))
             .addCommit(charsConsumed != 0)
             .advanceSuccess(charsConsumed)
-        case err @ Failure(_, _) => err
-    }
+        case err@Failure(_, _) => err
+      }
 
   implicit def ops[A](p: Parser[A]): ParserOps[A] = new ParserOps[A](p)
 
@@ -91,6 +93,8 @@ object Parsers {
     def flatMap[B](f: A => Parser[B]): Parser[B] = Parsers.flatMap(p)(f)
 
     def map[B](f: A => B): Parser[B] = Parsers.map(p)(f)
+
+    def map2[B, C](p2: Parser[B])(f: (A, B) => C): Parser[C] = Parsers.map2(p, p2)(f)
 
     def **[B](p2: Parser[B]): Parser[(A, B)] = Parsers.product(p, p2)
 
@@ -125,7 +129,7 @@ object Parsers {
   case class Location(private val input: String, offset: Int) {
     lazy val line: Int = input.slice(0, offset + 1).count(_ == '\n') + 1
     lazy val col: Int = input.slice(0, offset + 1).lastIndexOf('\n') match {
-      case -1        => offset + 1
+      case -1 => offset + 1
       case lineStart => offset - lineStart
     }
 
@@ -139,17 +143,17 @@ object Parsers {
   sealed trait Result[+A] {
     def mapError(f: ParseError => ParseError): Result[A] = this match {
       case Failure(e, isCommitted) => Failure(f(e), isCommitted)
-      case _                       => this
+      case _ => this
     }
 
     def advanceSuccess(n: Int): Result[A] = this match {
       case Success(a, m) => Success(a, m + n)
-      case _             => this
+      case _ => this
     }
 
     def addCommit(isCommitted: Boolean): Result[A] = this match {
       case Failure(e, c) => Failure(e, c || isCommitted)
-      case _             => this
+      case _ => this
     }
   }
 
